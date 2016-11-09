@@ -4,12 +4,296 @@
     <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.12/css/jquery.dataTables.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
+    <script src="https://cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
   </head>
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
-    <script>
-      // Run queries and display results here
+    <div class="pageViewsSlotDiv hidden">
+      <h1 class="pageViewsSlotHeader" >Page Views By Slot</h1>
+      <div class="pageViewsSlotChart"></div>
+      <table id="table" class="display pageViewsSlotTable" width="100%"></table>
+    </div>
+    <br>
+    <div class="slotStoryViewsDiv hidden">
+      <h1 class="slotStoryViewsHeader">Slot and Story Views</h1>
+      <div class="slotStoryViewsChart"></div>
+      <table id="table" class="display slotStoryViewsTable" width="100%"></table>
+    </div>
+    <br>
+    <div class="pageViewsIndexDiv hidden">  
+      <h1 class="pageViewsIndexHeader">Page Views by Index</h1>
+      <div class="pageViewsIndexChart"></div>
+      <table id="table" class="display pageViewsIndexTable" width="100%"></table>
+    </div>
+    
+    <script id='multiseg'>
+      var utcToEst = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}))
+      function main() {
+        return Events({
+          from_date: params.from,
+          to_date:   params.to,
+          event_selectors: [{event: 'Page View', selector:'defined (properties["Referrer Slot"]) and (properties["$os"] == "Linux" or properties["$os"] == "Mac OS X" or properties["$os"] == "Windows") and defined (properties["Referrer Position Type"]) and (properties["Edition Name"] == "English / United States") and defined (properties["Story Headline"])'}]
+        })
+        .filter(function(event){ return today(event) || yesterdayHour(event) || weekHour(event)})
+        
+        .groupBy([stringSlot, "properties.Referrer Position Type"], function(accs, events){
+          var res = {}
+          _.each(events, function(event){
+            var timeStr = [new Date(event.time).toISOString().split(':')[0],'00','00'].join(':')
+            res[timeStr] = res[timeStr] + 1 || 1
+            if (event.time > res.last || !res.last){
+              res.story = event.properties["Story Headline"]
+              res.last = event.time
+            }
+          })
+          _.each(accs, function(acc){
+            _.each(acc, function(v, k){
+              if (k == 'story' || k =='last'){
+                if (acc.last > res.last || !res.last) {
+                  res.story = acc.story
+                  res.last = acc.last
+                }
+              } else {
+                res[k] = res[k] + v || v
+              } 
+            })
+          })
+          return res
+        })
+        .map(function(item){
+          var res = {
+            slot: item.key[0],
+            position: item.key[1],
+            story: item.value.story,
+            value: _.omit(item.value, ['story', 'last'])
+          }
+          return res
+        })
+      }
+      
+      function stringSlot(event){
+        return String(event.properties["Referrer Slot"])
+      }
+      
+      function today(event){
+        return utcToEst.toISOString().split('T')[0] == new Date(event.time).toISOString().split('T')[0]
+      }
+      
+      function yesterdayHour(event){
+        return new Date(utcToEst - 1000 * 60 * 60 * 24).toISOString().split(':')[0] == new Date(event.time).toISOString().split(':')[0]
+      }
+      
+      function weekHour(event){
+        return new Date(utcToEst - 1000 * 60 * 60 * 24 * 7).toISOString().split(':')[0] == new Date(event.time).toISOString().split(':')[0]
+      }
     </script>
+    <script>
+      // Use Data tables for better sorting/limiting etc
+       /* slot page views */
+       
+      var $pageViewsSlotTable = $('.pageViewsSlotTable').DataTable( {
+            columns: [
+                { title: 'Slot', data: 'name' },
+                { title: 'Current Hour', data: 'Current Hour' },
+                { title: '% Change over Yesterday', data: 'Percent Day over Day' },
+                { title: '24 Hours Ago', data: '24 Hours Ago'},
+                { title: '% Change over Last Week', data: 'Percent Last Week' },
+                { title: 'Last Week', data: 'Last Week' },
+            ]
+        });
+        
+      var $pageViewsIndexTable = $('.pageViewsIndexTable').DataTable( {
+            columns: [
+                { title: 'Index', data: 'name' },
+                { title: 'Current Hour', data: 'Current Hour' },
+                { title: '% Change over Yesterday', data: 'Percent Day over Day' },
+                { title: '24 Hours Ago', data: '24 Hours Ago'},
+                { title: '% Change over Last Week', data: 'Percent Last Week' },
+                { title: 'Last Week', data: 'Last Week' },
+            ]
+        });
+      var $slotStoryViewsTable = $('.slotStoryViewsTable').DataTable( {
+        columns: [
+            { title: 'Slot Story', data: 'slot' },
+            { title: 'Position', data: 'position'},
+            { title: 'Title', data: 'title'},
+            { title: 'Current Hour', data: 'Current Hour' },
+            { title: '% Change over Yesterday', data: 'Percent Day over Day' },
+            { title: '24 Hours Ago', data: '24 Hours Ago'},
+            { title: '% Change over Last Week', data: 'Percent Last Week' },
+            { title: 'Last Week', data: 'Last Week' },
+        ]
+      });
+      
+      function Script() { 
+        var highChartsConfig = {
+              tooltip: {
+                  formatter: function () {
+                    var dateObj = new Date(this.x)
+                    var [day, mon, date, year, hour] = dateObj.toString().split(' ')
+                    var response = [mon, date, hour].join(' ') + '<br/>' + this.series.name + ': ' + this.y
+                    return response
+                  }
+              },
+              xAxis: {
+                type: 'datetime',
+                tickInterval: 36e5,
+                labels: {
+                  formatter: function () {
+                      var dateObj = new Date(this.value)
+                      var [day, mon, date, year, hour] = dateObj.toString().split(' ')
+                      return [mon, date, hour].join(' ')
+                      
+                  }
+                }
+              },
+            }
+        var utcToEst = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}))
+        var pageViewSlotParams = {
+          where: 'defined (properties["Referrer Slot"]) and (properties["$os"] == "Linux" or properties["$os"] == "Mac OS X" or properties["$os"] == "Windows") and (properties["Referring Page"] == "Home Page") and (properties["Edition Name"] == "English / United States") and defined (properties["Story Headline"])',
+          on: 'properties["Referrer Slot"]',
+          to_date: utcToEst.toISOString().split('T')[0],
+          from_date: new Date(utcToEst - 60 * 60 * 1000 * 24 * 8).toISOString().split('T')[0],
+          unit: "hour"
+        }
+        
+        var $pastPageViewsSlot = MP.api.segment('Page View', pageViewSlotParams)
+        
+        $pastPageViewsSlot.done(function(data){
+          $('.pageViewsSlotDiv').removeClass('hidden')
+          var graphData = {}
+          var tableData = {}
+          _.each(data.json, function(dateObjs, series){
+           [graphData[series], tableData[series]] = filterData(dateObjs, ' ')
+          })
+          var $chart = $('.pageViewsSlotChart').MPChart({
+            highchartsOptions: highChartsConfig,
+            chartType: 'line',
+            data: graphData
+          })
+          
+          $pageViewsSlotTable.clear()
+          
+          _.each(tableData, function(vals, slot){
+            var row = _.extend({'name': slot}, vals)
+            $pageViewsSlotTable.row.add(row)
+          })
+         $pageViewsSlotTable.draw();
+        })
+        
+        
+        /* index page views */
+        
+        var pageViewIndexParams = {
+          where: '(properties["Edition Name"] == "English / United States") and (properties["$os"] == "Linux" or properties["$os"] == "Mac OS X" or properties["$os"] == "Windows") and (properties["Referring Page"] != "Home Page") and defined (properties["Referring Page"])',
+          on: 'properties["Referring Page"]',
+          to_date: utcToEst.toISOString().split('T')[0],
+          from_date: new Date(utcToEst - 60 * 60 * 1000 * 24 * 8).toISOString().split('T')[0],
+          unit: "hour"
+        }
+        
+        var $pastPageViewsIndexData = MP.api.segment('Page View', pageViewIndexParams)
+        
+        $pastPageViewsIndexData.done(function(data){
+          $('.pageViewsIndexDiv').removeClass('hidden')
+          var graphData = {}
+          var tableData = {}
+          _.each(data.json, function(dateObjs, series ){
+          [graphData[series], tableData[series]] = filterData(dateObjs, ' ')
+          })
+          var $chart = $('.pageViewsIndexChart').MPChart({
+            highchartsOptions: highChartsConfig,
+            chartType: 'line',
+            data: graphData
+          })
+          
+          $pageViewsIndexTable.clear()
+          _.each(tableData, function(vals, index){
+            var row = _.extend({'name': index}, vals)
+            $pageViewsIndexTable.row.add(row)
+          })
+          $pageViewsIndexTable.draw();
+        })
+        
+        /* Slot by story */
+        var jqlParams = {
+          to: new Date().toISOString().split('T')[0],
+          from: new Date(new Date() - 60 * 60 * 1000 * 24 * 8).toISOString().split('T')[0],
+          os: 'desktop'
+        }
+        
+        var query = $('#multiseg').html()
+        MP.api.jql(query,jqlParams).done(function(data){
+          $('.slotStoryViewsDiv').removeClass('hidden')
+          var graphData = {}
+          var tableData = {}
+          _.each(data, function(obj){
+            var slotString =
+            [graphData["Slot " + String(obj.slot) + ":Position " + String(obj.position) + ":Story " + String(obj.story)], tableData["Slot " + String(obj.slot) + "~" + String(obj.position) + "~" + String(obj.story)]] = filterData(obj.value, 'T')
+          })
+          var $chart = $('.slotStoryViewsChart').MPChart({
+            highchartsOptions: highChartsConfig,
+            chartType: 'line',
+            data: graphData
+          })
+          $slotStoryViewsTable.clear()
+          _.each(tableData, function(vals, index){
+            // split this to slot, position title
+            var [slot, position, title] = index.split('~')
+            var row = _.extend({'slot': slot, 'position':position, 'title':title}, vals)
+            $slotStoryViewsTable.row.add(row)
+          })
+          $slotStoryViewsTable.draw();
+        });
+      }      
+      
+      function filterData(dateObjs, seperator){
+        var dateObj = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}))
+        var graphData = _.pick(dateObjs, function(v,date) { 
+          if (new Date(date.replace('T', ' ')) > dateObj - (1000 * 60 * 60 * 8) && new Date(date.replace('T', ' ')) < dateObj){
+            return true
+          }
+        })  
+        
+        var currHour = seperator + pad(dateObj.getHours(),2) + ':00:00'
+        var currDay = dateObj.getFullYear() + '-' + pad((dateObj.getMonth() + 1),2) + '-' + pad(dateObj.getDate(),2) + currHour
+        var lastDateObj = new Date(new Date() - (1000 * 60 * 60 * 24))
+        var lastDay = lastDateObj.getFullYear() + '-' + pad((lastDateObj.getMonth() + 1),2) + '-' + pad(lastDateObj.getDate(),2) + currHour
+        var lastWkObj = new Date(new Date() - (1000 * 60 * 60 * 24 * 7))
+        var lastWeek = lastWkObj.getFullYear() + '-' + pad((lastWkObj.getMonth() + 1),2) + '-' + pad(lastWkObj.getDate(),2) + currHour
+        
+        var percentYesterday = percent(dateObjs[currDay], dateObjs[lastDay])
+        var percentLastWeek = percent(dateObjs[currDay], dateObjs[lastWeek])
+        if (percentLastWeek !== percentLastWeek) debugger
+        var tableData = {
+          'Current Hour': dateObjs[currDay] || 0,
+          'Percent Day over Day': percentYesterday,
+          '24 Hours Ago': dateObjs[lastDay] || 0, 
+          'Percent Last Week': percentLastWeek,
+          'Last Week': dateObjs[lastWeek] || 0
+        }
+        return [graphData, tableData]
+      }
+  
+      
+      function pad(num, size){ return ('000000000' + num).substr(-size)};
+      function percent(num, denom){ 
+        if (denom == 0 || !denom || !num) {
+          return 0 
+        } else {
+          return ((num - denom) / denom * 100).toFixed(1)
+        }
+      }
+      // Refresh Every 5 minutes
+      Script()
+      setInterval(Script, 1000 * 60 * 5)
+    </script>
+    
   </body>
 </html>
