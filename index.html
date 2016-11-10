@@ -349,20 +349,22 @@ var seriesData = [
       }
   }
       
-      var dropdownOptions = [
-          {
-            label: "English / United States",
-            value: "English / United States"
-          },
-          {
-            label: "English / Australia",
-            value: "English / Australia"
-          },
-          {
-            label: "English / India",
-            value: "English / India"
-          }
-        ];
+      var dropdownOptions = {
+        items: [
+            {
+              label: "English / United States",
+              value: "English / United States"
+            },
+            {
+              label: "English / Australia",
+              value: "English / Australia"
+            },
+            {
+              label: "English / India",
+              value: "English / India"
+            }
+          ]
+        };
       var filterDropdown = $('.report-filter-dropdown').MPSelect(dropdownOptions);
     </script>
   </body>
