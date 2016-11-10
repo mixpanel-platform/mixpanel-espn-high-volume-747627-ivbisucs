@@ -300,6 +300,8 @@
       setInterval(Script, 1000 * 60 * 5)
     </script>
     
+    
+    <!-- **** UI Scripting **** -->
     <script id="ui">
       var slotColorPalette = [
       [ '#f9bdbd', '#f06060', '#e90f0f', '#ba0c0c', '#740707' ],   // reds
@@ -392,7 +394,14 @@
       }
         
       var filterDropdown = $('.report-filter-dropdown').MPSelect(editionDropdownOptions);
+      filterDropdown.on('change', function(e, selection) {
+        Script();
+      });
+      
       var rangeDropdown = $('.report-slot-range-dropdown').MPSelect(slotRangeDropdownOptions);
+      rangeDropdown.on('change', function(e, selection) {
+        Script();
+      })
     </script>
   </body>
 </html>
