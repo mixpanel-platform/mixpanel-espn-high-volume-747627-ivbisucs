@@ -301,59 +301,59 @@
     </script>
     
     <script id="ui">
-    var slotColorPalette = [
-    [ '#f9bdbd', '#f06060', '#e90f0f', '#ba0c0c', '#740707' ],   // reds
-    [ '#b5c6f2', '#6388e5', '#2155da', '#173b98', '#0d2257' ],   // blues
-    [ '#f7d4a6', '#efaf58', '#e98d11', '#a3620b', '#5d3806' ],   // oranges
-    [ '#baf2bb', '#6ee36f', '#31d832', '#229723', '#135614' ],   // greens
-    [ '#dabaed', '#b776dc', '#993cce', '#6b2a90', '#3d1852' ],   // purples
-];
-
-var seriesData = [
-    {
-    slot: 1,
-    storyNumber: 1,
-    name: 'Slot 1 - Story 1',
-    data: [ {x: Date.now(), y: -5}, {x: Date.now() + 20000, y: -6}, {x: Date.now() + 40000, y: -8} ]
-    },
-    {
-      slot: 1,
-      storyNumber: 2,
-      name: 'Slot 1 - Story 2',
-      data: [ {x: Date.now() + 40000, y: -8}, {x: Date.now() + 60000, y: 5}, {x: Date.now() + 80000, y: 6}, {x: Date.now() + 100000, y: 8} ]
-    },
-    {
-      slot: 2,
-      storyNumber: 1,
-      name: 'Slot 2 - Story 1',
-      data: [ {x: Date.now(), y: 4}, {x: Date.now() + 20000, y: 5}, {x: Date.now() + 40000, y: 6}, {x: Date.now() + 60000, y: 3} ]
-    },
-    {
-      slot: 2,
-      storyNumber: 2,
-      name: 'Slot 2 - Story 2',
-      data: [ {x: Date.now() + 60000, y: 3}, {x: Date.now() + 80000, y: 7}, {x: Date.now() + 100000, y: 10} ]
-    }
-  ];
-  
-  // Iterate over Slot Performance data (an array of objects to be put in Highcharts series)
-  // and insert color properties based on object's slot & story within slot
-  function insertColors(data) {
-  
-      for (var i = 0; i < data.length; i++) {
-          var currentData = data[i];
-          var dataSlotNumber = (currentData['slot'] - 1) % 5;   // Slot # can be in range [1, 20], this reduces to [0, 4]
-          var dataStoryNumber = currentData['storyNumber'];
-  
-          if (dataStoryNumber >= 5) {
-              currentData['color'] = slotColorPalette[dataSlotNumber][4];
-          } else {
-              currentData['color'] = slotColorPalette[dataSlotNumber][dataStoryNumber-1];
+      var slotColorPalette = [
+      [ '#f9bdbd', '#f06060', '#e90f0f', '#ba0c0c', '#740707' ],   // reds
+      [ '#b5c6f2', '#6388e5', '#2155da', '#173b98', '#0d2257' ],   // blues
+      [ '#f7d4a6', '#efaf58', '#e98d11', '#a3620b', '#5d3806' ],   // oranges
+      [ '#baf2bb', '#6ee36f', '#31d832', '#229723', '#135614' ],   // greens
+      [ '#dabaed', '#b776dc', '#993cce', '#6b2a90', '#3d1852' ],   // purples
+      ];
+      
+      var seriesData = [
+          {
+          slot: 1,
+          storyNumber: 1,
+          name: 'Slot 1 - Story 1',
+          data: [ {x: Date.now(), y: -5}, {x: Date.now() + 20000, y: -6}, {x: Date.now() + 40000, y: -8} ]
+          },
+          {
+            slot: 1,
+            storyNumber: 2,
+            name: 'Slot 1 - Story 2',
+            data: [ {x: Date.now() + 40000, y: -8}, {x: Date.now() + 60000, y: 5}, {x: Date.now() + 80000, y: 6}, {x: Date.now() + 100000, y: 8} ]
+          },
+          {
+            slot: 2,
+            storyNumber: 1,
+            name: 'Slot 2 - Story 1',
+            data: [ {x: Date.now(), y: 4}, {x: Date.now() + 20000, y: 5}, {x: Date.now() + 40000, y: 6}, {x: Date.now() + 60000, y: 3} ]
+          },
+          {
+            slot: 2,
+            storyNumber: 2,
+            name: 'Slot 2 - Story 2',
+            data: [ {x: Date.now() + 60000, y: 3}, {x: Date.now() + 80000, y: 7}, {x: Date.now() + 100000, y: 10} ]
+          }
+        ];
+    
+      // Iterate over Slot Performance data (an array of objects to be put in Highcharts series)
+      // and insert color properties based on object's slot & story within slot
+      function insertColors(data) {
+      
+          for (var i = 0; i < data.length; i++) {
+              var currentData = data[i];
+              var dataSlotNumber = (currentData['slot'] - 1) % 5;   // Slot # can be in range [1, 20], this reduces to [0, 4]
+              var dataStoryNumber = currentData['storyNumber'];
+      
+              if (dataStoryNumber >= 5) {
+                  currentData['color'] = slotColorPalette[dataSlotNumber][4];
+              } else {
+                  currentData['color'] = slotColorPalette[dataSlotNumber][dataStoryNumber-1];
+              }
           }
       }
-  }
       
-      var dropdownOptions = {
+      var editionDropdownOptions = {
         items: [
             {
               label: "English / United States",
@@ -369,7 +369,30 @@ var seriesData = [
             }
           ]
         };
-      var filterDropdown = $('.report-filter-dropdown').MPSelect(dropdownOptions);
+      
+      var slotRangeDropdownOptions = {
+        items: [
+            {
+              label: '1-5',
+              value: '0 5'
+            },
+            {
+              label: '6-10',
+              value: '6 10'
+            },
+            {
+              label: '11-15',
+              value: '11 15'
+            },
+            {
+              label: '16-20',
+              value: '16 20'
+            }
+          ]
+      }
+        
+      var filterDropdown = $('.report-filter-dropdown').MPSelect(editionDropdownOptions);
+      var rangeDropdown = $('.report-slot-range-dropdown').MPSelect(slotRangeDropdownOptions);
     </script>
   </body>
 </html>
