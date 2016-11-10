@@ -384,6 +384,10 @@
         
         // Grab set of 5 slots based on range from dropdown
         var dataSet = pageViewsSlotData.slice(lowerBound, upperBound);
+        
+        // Assign colors to data
+        insertColors(dataSet);
+        
         chart = new Highcharts.Chart({
               chart: {
                   renderTo: 'slot-performance-chart',
