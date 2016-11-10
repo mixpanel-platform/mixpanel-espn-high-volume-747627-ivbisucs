@@ -25,7 +25,7 @@
     </div>
     <div class="section pageViewsSlotDiv hidden">
         <h1 class="pageViewsSlotHeader" >Page Views By Slot</h1>
-        <div class="pageViewsSlotChart"></div>
+        <div id="slot-performance-chart" class="pageViewsSlotChart"></div>
         <table id="table" class="display pageViewsSlotTable" width="100%"></table>
     </div>
     <div class="section slotStoryViewsDiv hidden">
@@ -39,6 +39,42 @@
       <div class="pageViewsIndexChart"></div>
       <table id="table" class="display pageViewsIndexTable" width="100%"></table>
     </div>
+    
+    <script id="state">
+      // Data for color-gradient slot & story performance
+      var pageViewsSlotData = {};
+      
+      // Slot range to display on chart
+      var slotRange = '1 5';
+      
+      // Fake data for testing chart
+      var fakeSeriesData = [
+        {
+        slot: 1,
+        storyNumber: 1,
+        name: 'Slot 1 - Story 1',
+        data: [ {x: Date.now(), y: -5}, {x: Date.now() + 20000, y: -6}, {x: Date.now() + 40000, y: -8} ]
+        },
+        {
+          slot: 1,
+          storyNumber: 2,
+          name: 'Slot 1 - Story 2',
+          data: [ {x: Date.now() + 40000, y: -8}, {x: Date.now() + 60000, y: 5}, {x: Date.now() + 80000, y: 6}, {x: Date.now() + 100000, y: 8} ]
+        },
+        {
+          slot: 2,
+          storyNumber: 1,
+          name: 'Slot 2 - Story 1',
+          data: [ {x: Date.now(), y: 4}, {x: Date.now() + 20000, y: 5}, {x: Date.now() + 40000, y: 6}, {x: Date.now() + 60000, y: 3} ]
+        },
+        {
+          slot: 2,
+          storyNumber: 2,
+          name: 'Slot 2 - Story 2',
+          data: [ {x: Date.now() + 60000, y: 3}, {x: Date.now() + 80000, y: 7}, {x: Date.now() + 100000, y: 10} ]
+        }
+      ];
+    </script>
     
     <script id='multiseg'>
       var utcToEst = new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"}))
@@ -180,11 +216,21 @@
           _.each(data.json, function(dateObjs, series){
            [graphData[series], tableData[series]] = filterData(dateObjs, ' ')
           })
-          var $chart = $('.pageViewsSlotChart').MPChart({
+          
+          // *** Steven's UI code here
+          // Set state variable with data from query
+          //pageViewsSlotData = graphData;
+          /*var $chart = $('.pageViewsSlotChart').MPChart({
             highchartsOptions: highChartsConfig,
             chartType: 'line',
             data: graphData
-          })
+          })*/
+          
+          // For testing
+          pageViewsSlotData = fakeSeriesData;
+          
+          renderSlotPerformanceChart(slotRange);
+          // *** End Steven's UI code
           
           $pageViewsSlotTable.clear()
           
@@ -313,38 +359,10 @@
       [ '#baf2bb', '#6ee36f', '#31d832', '#229723', '#135614' ],   // greens
       [ '#dabaed', '#b776dc', '#993cce', '#6b2a90', '#3d1852' ],   // purples
       ];
-      
-      var seriesData = [
-          {
-          slot: 1,
-          storyNumber: 1,
-          name: 'Slot 1 - Story 1',
-          data: [ {x: Date.now(), y: -5}, {x: Date.now() + 20000, y: -6}, {x: Date.now() + 40000, y: -8} ]
-          },
-          {
-            slot: 1,
-            storyNumber: 2,
-            name: 'Slot 1 - Story 2',
-            data: [ {x: Date.now() + 40000, y: -8}, {x: Date.now() + 60000, y: 5}, {x: Date.now() + 80000, y: 6}, {x: Date.now() + 100000, y: 8} ]
-          },
-          {
-            slot: 2,
-            storyNumber: 1,
-            name: 'Slot 2 - Story 1',
-            data: [ {x: Date.now(), y: 4}, {x: Date.now() + 20000, y: 5}, {x: Date.now() + 40000, y: 6}, {x: Date.now() + 60000, y: 3} ]
-          },
-          {
-            slot: 2,
-            storyNumber: 2,
-            name: 'Slot 2 - Story 2',
-            data: [ {x: Date.now() + 60000, y: 3}, {x: Date.now() + 80000, y: 7}, {x: Date.now() + 100000, y: 10} ]
-          }
-        ];
     
       // Iterate over Slot Performance data (an array of objects to be put in Highcharts series)
       // and insert color properties based on object's slot & story within slot
       function insertColors(data) {
-      
           for (var i = 0; i < data.length; i++) {
               var currentData = data[i];
               var dataSlotNumber = (currentData['slot'] - 1) % 5;   // Slot # can be in range [1, 20], this reduces to [0, 4]
@@ -356,6 +374,76 @@
                   currentData['color'] = slotColorPalette[dataSlotNumber][dataStoryNumber-1];
               }
           }
+      }
+      
+      // range param is string of form 'x y' where x is the lower bound and y the upper bound
+      // ex: range = '1 5', range = '6 10', etc.
+      function renderSlotPerformanceChart(range) {
+        var lowerBound = (range.split(' ')[0]).parseInt() - 1;
+        var upperBound = (range.split(' ')[1]).parseInt();
+        
+        // Grab set of 5 slots based on range from dropdown
+        var dataSet = pageViewsSlotData.slice(lowerBound, upperBound);
+        chart = new Highcharts.Chart({
+              chart: {
+                  renderTo: 'slot-performance-chart',
+                  type: 'line',
+                  marginRight: 130,
+                  marginBottom: 25
+              },
+              title: {
+                  text: 'Slot Performances By Story',
+                  x: -20 //center
+              },
+              xAxis: {
+                type: 'datetime',
+                tickInterval: 36e5,
+                labels: {
+                  formatter: function () {
+                      var dateObj = new Date(this.value)
+                      var [day, mon, date, year, hour] = dateObj.toString().split(' ')
+                      return [mon, date, hour].join(' ')
+                      
+                  }
+                }
+              },
+              yAxis: {
+                  title: {
+                      text: 'Performance Against Slot Average'
+                  },
+                  plotLines: [{
+                      value: 0,
+                      width: 1,
+                      color: '#808080'
+                  }]
+              },
+              tooltip: {
+                  formatter: function () {
+                    var dateObj = new Date(this.x)
+                    var [day, mon, date, year, hour] = dateObj.toString().split(' ')
+                    var response = [mon, date, hour].join(' ') + '<br/>' + this.series.name + ': ' + this.y
+                    return response
+                  }
+              },
+              plotOptions: {
+              	line: {
+                	lineWidth: 4,
+                	marker: {
+                  	radius: 6,
+                  	symbol: 'circle'
+                  }
+                }
+              },
+              legend: {
+                  layout: 'vertical',
+                  align: 'right',
+                  verticalAlign: 'top',
+                  x: -10,
+                  y: 100,
+                  borderWidth: 0
+              },
+              series: dataSet
+          });
       }
       
       var editionDropdownOptions = {
@@ -403,6 +491,7 @@
       
       var rangeDropdown = $('.report-slot-range-dropdown').MPSelect(slotRangeDropdownOptions);
       rangeDropdown.on('change', function(e, selection) {
+        slotRange = selection;
         Script();
       })
     </script>
