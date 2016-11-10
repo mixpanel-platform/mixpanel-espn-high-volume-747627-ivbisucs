@@ -379,8 +379,8 @@
       // range param is string of form 'x y' where x is the lower bound and y the upper bound
       // ex: range = '1 5', range = '6 10', etc.
       function renderSlotPerformanceChart(range) {
-        var lowerBound = (range.split(' ')[0]).parseInt() - 1;
-        var upperBound = (range.split(' ')[1]).parseInt();
+        var lowerBound = (parseInt(range.split(' ')[0])) - 1;
+        var upperBound = (parseInt(range.split(' ')[1]));
         
         // Grab set of 5 slots based on range from dropdown
         var dataSet = pageViewsSlotData.slice(lowerBound, upperBound);
